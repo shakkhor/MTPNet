@@ -118,14 +118,13 @@ class series_decomp_multi(nn.Module):
         self.moving_avg = [moving_avg(kernel, stride=1) for kernel in kernel_size]
 
     def forward(self, x):
-        moving_mean = []
-        res = []
-        for func in self.moving_avg:
-            moving_avg = func(x)
-            moving_mean.append(moving_avg)
-            sea = x - moving_avg
-            res.append(sea)
+        trends = []
+        residuals = []
+        for smoother in self.moving_avg:
+            trend_i = smoother(x)
+            trends.append(trend_i)
+            residuals.append(x - trend_i)
 
-        sea = sum(res) / len(res)
-        moving_mean = sum(moving_mean) / len(moving_mean)
-        return sea, moving_mean
+        seasonal = sum(residuals) / len(residuals)
+        trend = sum(trends) / len(trends)
+        return seasonal, trend

@@ -159,6 +159,7 @@ def process_one_batch(model, batch_x, batch_y, args):
     batch_y = batch_y.float().to(args.device)
 
     # decoder input
+    #batch_y len = label_len + pred_len that's why it is taking the last ones
     dec_inp = torch.zeros_like(batch_y[:, -args.pred_len:, :]).float()
     dec_inp = torch.cat([batch_y[:, :args.label_len, :], dec_inp], dim=1).float().to(args.device)
 

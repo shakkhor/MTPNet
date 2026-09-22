@@ -19,6 +19,7 @@ class FullAttention(nn.Module):
         scale = self.scale or 1. / sqrt(E)
 
         scores = torch.einsum("blhe,bshe->bhls", queries, keys)
+        #dimension of scores = L * S, L is the length of the sequnce of queries, S is the length of sequence and values
 
         if self.mask_flag:
             if attn_mask is None:

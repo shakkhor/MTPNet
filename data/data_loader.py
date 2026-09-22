@@ -45,11 +45,24 @@ class Dataset_MTS(Dataset):
             train_num = self.data_split[0]
             val_num = self.data_split[1]
             test_num = self.data_split[2]
-        border1s = [0, train_num - self.in_len, train_num + val_num - self.in_len]
-        border2s = [train_num, train_num + val_num, train_num + val_num + test_num]
 
-        border1 = border1s[self.set_type]
-        border2 = border2s[self.set_type]
+        # border1s = [0, train_num - self.in_len, train_num + val_num - self.in_len]
+        # border2s = [train_num, train_num + val_num, train_num + val_num + test_num]
+        #
+        # border1 = border1s[self.set_type]
+        # border2 = border2s[self.set_type]
+
+        train_start, train_end = 0, train_num
+        val_start, val_end = train_num - self.in_len, train_num + val_num
+        test_start, test_end = train_num + val_num - self.in_len, train_num + val_num + test_num
+
+        split_bounds = {
+            'train': (train_start, train_end),
+            'val': (val_start, val_end),
+            'test': (test_start, test_end),
+        }
+
+        border1, border2 = split_bounds[self.flag]
 
         cols_data = df_raw.columns[1:]
         df_data = df_raw[cols_data]
@@ -57,7 +70,7 @@ class Dataset_MTS(Dataset):
         if self.scale:
             if self.scale_statistic is None:
                 self.scaler = StandardScaler()
-                train_data = df_data[border1s[0]:border2s[0]]
+                train_data = df_data[border1 : border2]
                 self.scaler.fit(train_data.values)
             else:
                 self.scaler = StandardScaler(mean=self.scale_statistic['mean'], std=self.scale_statistic['std'])

@@ -1,9 +1,13 @@
 import argparse
+from argparse import Namespace
+
 import torch
 from exp.exp_main import Exp_Main
 import random
 import numpy as np
 from utils.tools import string_split
+import json
+from datetime import datetime
 
 
 def main():
@@ -37,8 +41,8 @@ def main():
 
 
     parser.add_argument('--n_heads', type=int, default=4, help='number of multihead attention')
-    parser.add_argument('--encoder_depth', type=int, default=2, help='batch size of train input data')
-    parser.add_argument('--decoder_depth', type=int, default=1, help='batch size of train input data')
+    parser.add_argument('--encoder_depth', type=int, default=2, help='number of encoder layers')
+    parser.add_argument('--decoder_depth', type=int, default=1, help='number of decoder layers')
     parser.add_argument('--d_ff', type=int, default=32, help='dimension of MLP in transformer')
     parser.add_argument('--output_attention', action='store_true', help='whether to output attention in encoder')
     parser.add_argument('--H_depth', type=int, default=1, help='The depth of hierarchical transformer')
@@ -113,28 +117,15 @@ def main():
         args.data_split = string_split(args.data_split)
 
     print('Args in experiment:')
-    print(args)
+    print(json.dumps(vars(args), indent=4, sort_keys=True, default=str))
+    #print(args)
 
     Exp = Exp_Main
 
     if args.is_training:
         for ii in range(args.itr):
             # setting record of experiments
-            setting = '{}_{}_{}_ft{}_sl{}_ll{}_pl{}_segl{}_dm{}_Hlvl{}_nh{}_el{}_dl{}_df{}'.format(
-                args.mode,
-                args.model,
-                args.data,
-                args.features,
-                args.seq_len,
-                args.label_len,
-                args.pred_len,
-                args.patch_size,
-                args.embed_dim,
-                args.H_depth,
-                args.n_heads,
-                args.encoder_depth,
-                args.decoder_depth,
-                1)
+            setting = get_settings(args)
 
             exp = Exp(args)  # set experiments
             print('>>>>>>>start training : {}>>>>>>>>>>>>>>>>>>>>>>>>>>'.format(setting))
@@ -146,26 +137,33 @@ def main():
             torch.cuda.empty_cache()
     else:
         ii = 0
-        setting = '{}_{}_{}_ft{}_sl{}_ll{}_pl{}_segl{}_dm{}_Hlvl{}_nh{}_el{}_dl{}_df{}'.format(
-            args.mode,
-            args.model,
-            args.data,
-            args.features,
-            args.seq_len,
-            args.label_len,
-            args.pred_len,
-            args.patch_size,
-            args.embed_dim,
-            args.H_depth,
-            args.n_heads,
-            args.encoder_depth,
-            args.decoder_depth,
-            1)
+        setting = get_settings(args)
 
         exp = Exp(args)  # set experiments
         print('>>>>>>>testing : {}<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<'.format(setting))
         exp.test(setting, test=1)
         torch.cuda.empty_cache()
+
+
+def get_settings(args: Namespace) -> str:
+    run_id = datetime.now().strftime('%Y%m%d-%H%M%S')
+
+    return '{}_{}_{}_ft{}_sl{}_ll{}_pl{}_segl{}_dm{}_Hlvl{}_nh{}_el{}_dl{}_df{}'.format(
+        run_id,
+        args.mode,
+        args.model,
+        args.data,
+        args.features,
+        args.seq_len,
+        args.label_len,
+        args.pred_len,
+        args.patch_size,
+        args.embed_dim,
+        args.H_depth,
+        args.n_heads,
+        args.encoder_depth,
+        args.decoder_depth,
+        1)
 
 
 if __name__ == "__main__":
