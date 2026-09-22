@@ -48,7 +48,7 @@ class Model(nn.Module):
         encoder_output = self.encoder_seasonal(x_enc)
 
 
-        final_predict = self.encoder_seasonal.encoder_segments[0]
+        final_predict = self.encoder_seasonal.encoder_segments[0].concat(encoder_output[0])
         for i in range(1, self.encoder_seasonal.H_depth):
             final_predict = torch.cat((final_predict, self.encoder_seasonal.encoder_segments[i].concat(encoder_output[i])), dim=1)
         final_predict = self.output_layer(final_predict)
