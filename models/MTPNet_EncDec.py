@@ -42,8 +42,8 @@ class tsformer_Encoder(nn.Module):
                                                            output_attention=configs.output_attention),
                             d_model_lvl,
                             configs.n_heads),
-                        d_model=configs.embed_dim,
-                        d_ff=d_model_lvl,
+                        d_model=d_model_lvl,
+                        d_ff=dff_lvl,
                         dropout=configs.dropout,
                         activation=configs.activation
                     ) for l in range(configs.encoder_depth)
