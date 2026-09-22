@@ -40,10 +40,10 @@ class tsformer_Encoder(nn.Module):
                                                            False,
                                                            attention_dropout=configs.dropout,
                                                            output_attention=configs.output_attention),
-                            configs.embed_dim,
+                            d_model_lvl,
                             configs.n_heads),
                         d_model=configs.embed_dim,
-                        d_ff=configs.d_ff,
+                        d_ff=d_model_lvl,
                         dropout=configs.dropout,
                         activation=configs.activation
                     ) for l in range(configs.encoder_depth)

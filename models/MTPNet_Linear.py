@@ -19,8 +19,6 @@ class Model(nn.Module):
         self.in_channel = configs.data_dim
         self.embed_dim = configs.embed_dim
         self.encoder_depth = configs.encoder_depth
-        self.decoder_depth = configs.decoder_depth
-        self.decoder_embed_dim = configs.decoder_embed_dim
         self.dropout = configs.dropout
         self.epoch = 0
         configs.activation = 'gelu'
@@ -51,7 +49,7 @@ class Model(nn.Module):
 
 
         final_predict = self.encoder_seasonal.encoder_segments[0]
-        for i in range(1, self.decoder_seasonal.H_depth):
+        for i in range(1, self.encoder_seasonal.H_depth):
             final_predict = torch.cat((final_predict, self.encoder_seasonal.encoder_segments[i].concat(encoder_output[i])), dim=1)
         final_predict = self.output_layer(final_predict)
 

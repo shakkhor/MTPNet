@@ -22,8 +22,6 @@ class Model(nn.Module):
         self.embed_dim = configs.embed_dim
         # self.mask_ratio = configs.mask_ratio
         self.encoder_depth = configs.encoder_depth
-        self.decoder_depth = configs.decoder_depth
-        self.decoder_embed_dim = configs.decoder_embed_dim
         self.dropout = configs.dropout
         self.epoch = 0
         configs.activation = 'gelu'
@@ -66,9 +64,9 @@ class Model(nn.Module):
         encoder_trend_output = self.encoder_trend(trend_enc)
 
         # Trend output
-        trend_predict = self.decoder_trend.decoder_segments[0].concat(encoder_trend_output[0])
-        for i in range(1, self.decoder_trend.H_depth):
-            trend_predict = torch.cat((trend_predict, self.decoder_trend.decoder_segments[i].concat(encoder_trend_output[i])), dim=1)
+        trend_predict = self.encoder_trend.encoder_segments[0].concat(encoder_trend_output[0])
+        for i in range(1, self.encoder_trend.H_depth):
+            trend_predict = torch.cat((trend_predict, self.encoder_trend.encoder_segments[i].concat(encoder_trend_output[i])), dim=1)
         trend_predict = self.output_layer_trend(trend_predict)
 
         # Concate Trend and Seasonal
