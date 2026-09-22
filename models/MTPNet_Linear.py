@@ -38,6 +38,9 @@ class Model(nn.Module):
         # Trend Encoder
         self.trend_model = nn.Linear(configs.seq_len, configs.pred_len)
 
+        # Seasonal projection: seq_len -> pred_len
+        self.seasonal_proj = nn.Linear(configs.seq_len, configs.pred_len)
+
     def forward(self, x_enc, x_dec,
                 enc_self_mask=None, dec_self_mask=None, dec_enc_mask=None
                 ) -> torch.tensor:
@@ -59,7 +62,9 @@ class Model(nn.Module):
         trend_predict = rearrange(trend_predict, 'b ts_d seq_len -> b seq_len ts_d')
 
         # Concate Trend and Seasonal
-        final_predict = rearrange(final_predict, 'b 1 seq_len ts_d -> b seq_len ts_d')[:, -self.pred_len:, :]
+        final_predict = rearrange(final_predict, 'b 1 seq_len ts_d -> b ts_d seq_len')
+        final_predict = self.seasonal_proj(final_predict)
+        final_predict = rearrange(final_predict, 'b ts_d pred_len -> b pred_len ts_d')
         final_predict += trend_predict
 
         final_predict = self.revin_layer(final_predict, 'denorm')
