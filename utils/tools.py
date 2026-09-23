@@ -158,18 +158,22 @@ def process_one_batch(model, batch_x, batch_y, args):
     batch_x = batch_x.float().to(args.device)
     batch_y = batch_y.float().to(args.device)
 
+    # decoder input
+    dec_inp = torch.zeros_like(batch_y[:, -args.pred_len:, :]).float()
+    dec_inp = torch.cat([batch_y[:, :args.label_len, :], dec_inp], dim=1).float().to(args.device)
+
     # encoder - decoder
     if args.use_amp:
         with torch.cuda.amp.autocast():
             if args.output_attention:
-                outputs = model(batch_x, batch_y)[0]
+                outputs = model(batch_x, dec_inp)[0]
             else:
-                outputs = model(batch_x, batch_y)
+                outputs = model(batch_x, dec_inp)
     else:
         if args.output_attention:
-            outputs, attns = model(batch_x, batch_y)
+            outputs, attns = model(batch_x, dec_inp)
         else:
-            outputs = model(batch_x, batch_y)
+            outputs = model(batch_x, dec_inp)
 
         f_dim = -1 if args.features == 'S' else 0
 
