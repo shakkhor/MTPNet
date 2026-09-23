@@ -61,6 +61,12 @@ def main():
     parser.add_argument('--load_pretrained_model', type=bool, default=False, help='flag for wether load encoder from pretrained model')
     parser.add_argument('--ala_type', type=str, default='False', help='ablation study type')
 
+    # DozerAttention parameters
+    parser.add_argument('--local_window', type=int, default=7, help='The size of local window')
+    parser.add_argument('--stride', type=int, default=24,
+                        help='The stride interval sparse attention. If set to 24, interval will be 24.')
+    parser.add_argument('--rand_rate', type=int, default=0.1, help='The rate of random attention')
+    parser.add_argument('--vary_len', type=int, default=1, help='The start varying length, if 1 input equals output')
 
     args = parser.parse_args()
     args.mode = 'finetune'
