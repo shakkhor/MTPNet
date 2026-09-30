@@ -24,7 +24,6 @@ class Model(nn.Module):
         configs.activation = 'gelu'
 
         self.revin_layer = RevIN(self.in_channel, affine=True, subtract_last=False)
-        self.revin_layer_dec = RevIN(self.in_channel, affine=True, subtract_last=False)
 
         # Decomposition
         self.decomp_multi = series_decomp_multi(configs.moving_avg)

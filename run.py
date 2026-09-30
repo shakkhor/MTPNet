@@ -27,7 +27,7 @@ def main():
     parser.add_argument('--data_path', type=str, default='ETTh1.csv', help='location of the data file')
     parser.add_argument('--seq_len', type=int, default=96, help='input sequence length for encoder, look back window')
     parser.add_argument('--label_len', type=int, default=96, help='start token length of Informer decoder')
-    parser.add_argument('--pred_len', type=int, default=96, help='prediction sequence length, horizon')
+    parser.add_argument('--pred_len', type=int, default=192, help='prediction sequence length, horizon')
     parser.add_argument('--features', type=str, default='M', choices=['S', 'M'],
                         help='features S is univariate, M is multivariate')
     parser.add_argument('--num_workers', type=int, default=0, help='data loader num workers')
@@ -36,8 +36,8 @@ def main():
 
     parser.add_argument('--use_gpu', type=bool, default=True, help='use gpu')
     parser.add_argument('--data_dim', type=int, default=7, help='Number of dimensions of the MTS data (D)')
-    parser.add_argument('--embed_dim', type=int, default=8, help='encoder input size')
-    parser.add_argument('--decoder_embed_dim', type=int, default=8, help='encoder input size')
+    parser.add_argument('--embed_dim', type=int, default=32, help='encoder input size')
+
 
 
     parser.add_argument('--n_heads', type=int, default=4, help='number of multihead attention')
@@ -67,7 +67,7 @@ def main():
 
     # DozerAttention parameters
     parser.add_argument('--local_window', type=int, default=7, help='The size of local window')
-    parser.add_argument('--stride', type=int, default=24,
+    parser.add_argument('--stride', type=int, default=8,
                         help='The stride interval sparse attention. If set to 24, interval will be 24.')
     parser.add_argument('--rand_rate', type=int, default=0.1, help='The rate of random attention')
     parser.add_argument('--vary_len', type=int, default=1, help='The start varying length, if 1 input equals output')
@@ -75,6 +75,10 @@ def main():
 
     args = parser.parse_args()
     args.mode = 'finetune'
+
+    ##temporal param updates
+    args.embed_dim = 8
+    args.patch_size = '4, 8, 12'
 
     args.patch_size = [int(i) for i in args.patch_size.split(', ')]
     args.trend_patch_size = [int(i) for i in args.trend_patch_size.split(', ')]

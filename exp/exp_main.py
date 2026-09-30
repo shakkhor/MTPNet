@@ -185,6 +185,44 @@ class Exp_Main(Exp_Basic):
 
         return
 
+    def _write_readable_result(self, setting, mae, mse, rmse, mape, mspe, corr):
+        args = self.args
+        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+        lines = [
+            '## {} — {} ({}) on {}'.format(timestamp, args.model, args.mode, args.data),
+            '',
+            '`{}`'.format(setting),
+            '',
+            '| Param | Value |',
+            '|---|---|',
+            '| seq_len | {} |'.format(args.seq_len),
+            '| label_len | {} |'.format(args.label_len),
+            '| pred_len | {} |'.format(args.pred_len),
+            '| patch_size | {} |'.format(args.patch_size),
+            '| embed_dim | {} |'.format(args.embed_dim),
+            '| H_depth | {} |'.format(args.H_depth),
+            '| n_heads | {} |'.format(args.n_heads),
+            '| encoder_depth | {} |'.format(args.encoder_depth),
+            '| decoder_depth | {} |'.format(args.decoder_depth),
+            '| seed | {} |'.format(args.seed),
+            '',
+            '| Metric | Value |',
+            '|---|---|',
+            '| MSE | {:.4f} |'.format(mse),
+            '| MAE | {:.4f} |'.format(mae),
+            '| RMSE | {:.4f} |'.format(rmse),
+            '| MAPE | {:.4f} |'.format(mape),
+            '| MSPE | {:.4f} |'.format(mspe),
+            '| CORR | {:.4f} |'.format(corr),
+            '',
+            '---',
+            '',
+        ]
+
+        with open('results_readable.md', 'a') as f:
+            f.write('\n'.join(lines) + '\n')
+
     def predict(self, setting, load=False):
         pred_data, pred_loader = self._get_data(flag='pred')
 

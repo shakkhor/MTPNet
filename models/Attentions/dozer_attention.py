@@ -39,33 +39,6 @@ class DozerAttention(nn.Module):
                     sparse_mask = torch.diagonal_scatter(sparse_mask, torch.ones(L_Q - w_idx), w_idx)
                     sparse_mask = torch.diagonal_scatter(sparse_mask, torch.ones(L_Q - w_idx), -w_idx)
 
-        # Cross Attention
-        if L_Q != L_K:
-            # 1. local
-            if self.local_window:
-                local_window = self.local_window//2 if self.local_window>1 else self.local_window
-                sparse_mask[:, -local_window:] = 1
-
-            if self.stride:
-                start_index = L_K - L_Q//2
-                stride = self.stride + 1
-                # 未来和过去
-                for w_idx in range(start_index, L_K, stride):
-                    sparse_mask = torch.diagonal_scatter(sparse_mask,
-                                                         torch.ones(len(torch.diagonal(sparse_mask, w_idx))),
-                                                         w_idx)
-                for w_idx in range(start_index, -L_K, -stride):
-                    sparse_mask = torch.diagonal_scatter(sparse_mask,
-                                                         torch.ones(len(torch.diagonal(sparse_mask, w_idx))),
-                                                         w_idx)
-
-            if self.vary_len or type(self.vary_len) is int:
-                # 2024五月二十四日更改
-                start_index = -(L_Q - self.pred_len)+self.vary_len-1
-                var_len_mask = torch.tril(torch.ones(L_Q, L_K, device=queries.device), diagonal=start_index)
-                var_len_mask = torch.flip(var_len_mask, [1])
-                sparse_mask = torch.where((sparse_mask + var_len_mask) >= 1, 1, 0)
-                # a = sparse_mask.detach().cpu().numpy()
 
         scores = torch.zeros(B, H, L_Q, L_K).to(queries.device)
         for i in range(L_Q):
