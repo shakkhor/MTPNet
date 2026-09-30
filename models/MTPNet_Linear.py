@@ -4,7 +4,7 @@ from einops import rearrange
 
 from models.MTPNet_EncDec import tsformer_Encoder
 from models.Attentions.REVIN import RevIN
-from models.build_model_util import series_decomp_multi
+from models.build_model_util import series_decomp_multi, VariateMixer
 
 
 class Model(nn.Module):
@@ -38,6 +38,11 @@ class Model(nn.Module):
         # Trend Encoder
         self.trend_model = nn.Linear(configs.seq_len, configs.pred_len)
 
+        # Cross-variate attention on the seasonal branch (iTransformer-style)
+        self.variate_mixer = VariateMixer(configs.seq_len, configs.variate_d_model, configs.n_heads,
+                                          configs.variate_d_ff, configs.variate_layers,
+                                          configs.dropout) if configs.variate_attn else None
+
         # Seasonal projection: seq_len -> pred_len
         self.seasonal_proj = nn.Linear(configs.seq_len, configs.pred_len)
 
@@ -63,6 +68,8 @@ class Model(nn.Module):
 
         # Concate Trend and Seasonal
         final_predict = rearrange(final_predict, 'b 1 seq_len ts_d -> b ts_d seq_len')
+        if self.variate_mixer is not None:
+            final_predict = self.variate_mixer(final_predict)
         final_predict = self.seasonal_proj(final_predict)
         final_predict = rearrange(final_predict, 'b ts_d pred_len -> b pred_len ts_d')
         final_predict += trend_predict

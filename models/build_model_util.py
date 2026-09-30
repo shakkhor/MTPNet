@@ -4,6 +4,27 @@ from math import ceil
 from einops import rearrange
 
 
+# iTransformer-style variate mixing: each variate's series is one token and
+# attention runs across variates. Residual with a zero-initialized output
+# projection, so the block starts as an identity map.
+class VariateMixer(nn.Module):
+    def __init__(self, seq_len, d_model, n_heads, d_ff, n_layers, dropout):
+        super(VariateMixer, self).__init__()
+        self.embed = nn.Linear(seq_len, d_model)
+        self.encoder = nn.TransformerEncoder(
+            nn.TransformerEncoderLayer(d_model, n_heads, d_ff, dropout,
+                                       activation='gelu', batch_first=True),
+            n_layers,
+            enable_nested_tensor=False)
+        self.proj = nn.Linear(d_model, seq_len)
+        nn.init.zeros_(self.proj.weight)
+        nn.init.zeros_(self.proj.bias)
+
+    def forward(self, x):
+        # The shape of x:[batch_size, ts_d, seq_len]
+        return x + self.proj(self.encoder(self.embed(x)))
+
+
 # Dimension invariant embedding
 class DI_embedding(nn.Module):
     def __init__(self, seg_len, embed_dim, dropout):

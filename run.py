@@ -72,6 +72,13 @@ def main():
     parser.add_argument('--rand_rate', type=int, default=0.1, help='The rate of random attention')
     parser.add_argument('--vary_len', type=int, default=1, help='The start varying length, if 1 input equals output')
 
+    # Cross-variate attention (iTransformer-style) parameters
+    parser.add_argument('--variate_attn', action='store_true', default=False,
+                        help='add attention across variates before the output projection')
+    parser.add_argument('--variate_d_model', type=int, default=128, help='token dimension of variate attention')
+    parser.add_argument('--variate_d_ff', type=int, default=256, help='dimension of MLP in variate attention')
+    parser.add_argument('--variate_layers', type=int, default=1, help='number of variate attention layers')
+
 
     args = parser.parse_args()
     args.mode = 'finetune'
@@ -155,7 +162,7 @@ def main():
 def get_settings(args: Namespace) -> str:
     run_id = datetime.now().strftime('%Y%m%d-%H%M%S')
 
-    return '{}_{}_{}_ft{}_sl{}_ll{}_pl{}_segl{}_dm{}_Hlvl{}_nh{}_el{}_dl{}_df{}'.format(
+    return '{}_{}_{}_{}_ft{}_sl{}_ll{}_pl{}_segl{}_dm{}_Hlvl{}_nh{}_el{}_dl{}_df{}_va{}'.format(
         run_id,
         args.mode,
         args.model,
@@ -170,7 +177,8 @@ def get_settings(args: Namespace) -> str:
         args.n_heads,
         args.encoder_depth,
         args.decoder_depth,
-        1)
+        1,
+        args.variate_layers if args.variate_attn else 0)
 
 
 if __name__ == "__main__":
