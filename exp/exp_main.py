@@ -2,7 +2,7 @@ from data.data_provider import data_provider
 from exp.exp_basic import Exp_Basic
 from utils.tools import EarlyStopping, visual, process_one_batch
 from utils.metrics import metric
-from models import MTPNet, MTPNet_Linear
+from models import MTPNet, MTPNet_Linear, Dozerformer, Dozerformer_Linear
 
 import numpy as np
 import torch
@@ -25,7 +25,9 @@ class Exp_Main(Exp_Basic):
     def _build_model(self):
         model_dict = {
             'MTPNet': MTPNet,
-            'MTPNet_Linear': MTPNet_Linear
+            'MTPNet_Linear': MTPNet_Linear,
+            'Dozerformer': Dozerformer,
+            'Dozerformer_Linear': Dozerformer_Linear,
         }
         model = model_dict[self.args.model].Model(self.args).float()
         if self.args.use_multi_gpu and self.args.use_gpu:

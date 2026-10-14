@@ -32,13 +32,13 @@ class DozerAttention(nn.Module):
                 for w_idx in range(self.local_window//2+1):
                     sparse_mask = torch.diagonal_scatter(sparse_mask, torch.ones(L_Q - w_idx), w_idx)
                     sparse_mask = torch.diagonal_scatter(sparse_mask, torch.ones(L_Q - w_idx), -w_idx)
-
+            b = sparse_mask.detach().cpu().numpy()
             if self.stride:
                 stride = self.stride + 1
                 for w_idx in range(0, L_Q, stride):
                     sparse_mask = torch.diagonal_scatter(sparse_mask, torch.ones(L_Q - w_idx), w_idx)
                     sparse_mask = torch.diagonal_scatter(sparse_mask, torch.ones(L_Q - w_idx), -w_idx)
-
+        b = sparse_mask.detach().cpu().numpy()
         # Cross Attention
         if L_Q != L_K:
             # 1. local
@@ -71,13 +71,14 @@ class DozerAttention(nn.Module):
         for i in range(L_Q):
             seleted_keys_idxs = rearrange(sparse_mask[i, :].nonzero(), 'dim1 dim2 -> (dim1 dim2)')
             scores[:, :, i:i+1, seleted_keys_idxs] = torch.einsum("blhe,bshe->bhls", queries[:, i:i+1, :, :], keys[:, seleted_keys_idxs, :, :])
-
+        a = scores.detach().cpu().numpy()[0][0]
         if self.mask_flag:
             if attn_mask is None:
                 attn_mask = TriangularCausalMask(B, L_Q, device=queries.device)
             # attn_mask is bool
             scores.masked_fill_(attn_mask.mask, -np.inf)
         A = self.dropout(torch.softmax(scale * scores, dim=-1))
+        a = A.detach().cpu().numpy()[0][0]
         V = torch.einsum("bhls,bshd->blhd", A, values)
 
         if self.output_attention:

@@ -39,9 +39,10 @@ class Model(nn.Module):
         self.trend_model = nn.Linear(configs.seq_len, configs.pred_len)
 
         # Cross-variate attention on the seasonal branch (iTransformer-style)
-        self.variate_mixer = VariateMixer(configs.seq_len, configs.variate_d_model, configs.n_heads,
+        # Tokens are one variate at one scale, length embed_dim*seq_len
+        self.variate_mixer = VariateMixer(self.embed_dim * configs.seq_len, configs.variate_d_model, configs.n_heads,
                                           configs.variate_d_ff, configs.variate_layers,
-                                          configs.dropout) if configs.variate_attn else None
+                                          configs.dropout)
 
         # Seasonal projection: seq_len -> pred_len
         self.seasonal_proj = nn.Linear(configs.seq_len, configs.pred_len)
@@ -56,9 +57,18 @@ class Model(nn.Module):
         encoder_output = self.encoder_seasonal(x_enc)
 
 
-        final_predict = self.encoder_seasonal.encoder_segments[0].concat(encoder_output[0])
+        # one token per variate per scale, scales stacked on the variate axis
+        # example 32 8 8 12 7 -> 32 7 8*8*12 scale 1
+        # example 32 8 4 24 7 -> 32 7 8*4*24 scale 2
+        # combine two scales as the input for transformer 32 14 8*8*12
+        final_predict = rearrange(encoder_output[0], 'b d seg_num seg_len ts_d -> b ts_d (d seg_num seg_len)')
         for i in range(1, self.encoder_seasonal.H_depth):
-            final_predict = torch.cat((final_predict, self.encoder_seasonal.encoder_segments[i].concat(encoder_output[i])), dim=1)
+            final_predict = torch.cat((final_predict, rearrange(encoder_output[i], 'b d seg_num seg_len ts_d -> b ts_d (d seg_num seg_len)')), dim=1)
+        # apply variate mixer here for multi scale
+        final_predict = self.variate_mixer(final_predict)
+        # back to scales stacked on the channel axis: 32 14 8*96 -> 32 2*8 96 7
+        final_predict = rearrange(final_predict, 'b (s ts_d) (d seq_len) -> b (s d) seq_len ts_d',
+                                  ts_d=self.in_channel, d=self.embed_dim)
         final_predict = self.output_layer(final_predict)
 
         # Trend
@@ -68,8 +78,6 @@ class Model(nn.Module):
 
         # Concate Trend and Seasonal
         final_predict = rearrange(final_predict, 'b 1 seq_len ts_d -> b ts_d seq_len')
-        if self.variate_mixer is not None:
-            final_predict = self.variate_mixer(final_predict)
         final_predict = self.seasonal_proj(final_predict)
         final_predict = rearrange(final_predict, 'b ts_d pred_len -> b pred_len ts_d')
         final_predict += trend_predict

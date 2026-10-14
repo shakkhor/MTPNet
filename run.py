@@ -67,8 +67,10 @@ def main():
 
     # DozerAttention parameters
     parser.add_argument('--local_window', type=int, default=7, help='The size of local window')
+    # this should be determined with considering the total lengths of the patches
     parser.add_argument('--stride', type=int, default=24,
                         help='The stride interval sparse attention. If set to 24, interval will be 24.')
+    #this should be determined with considering the total lengths of the patches
     parser.add_argument('--rand_rate', type=int, default=0.1, help='The rate of random attention')
     parser.add_argument('--vary_len', type=int, default=1, help='The start varying length, if 1 input equals output')
 
@@ -129,6 +131,22 @@ def main():
         args.data_split = data_info['split']
     else:
         args.data_split = string_split(args.data_split)
+
+    # # run exp Dozerformer
+    # args.model = "Dozerformer"
+    # args.patch_size = 12
+    # args.stride = 24
+    # args.local_window = 7
+    # args.seq_len = 720
+
+    #Run exp variate mixer
+    args.model = "MTPNet"
+    args.local_window = 3
+    args.stride = 7
+    args.patch_size = [12, 24]
+    args.seq_len = 720
+
+
 
     print('Args in experiment:')
     print(json.dumps(vars(args), indent=4, sort_keys=True, default=str))

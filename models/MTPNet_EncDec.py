@@ -3,6 +3,7 @@ import torch
 from torch import nn
 from einops import rearrange
 
+from models.Attentions.SelfAttention_Family import AttentionLayer, FullAttention
 from models.Attentions.Transformer_EncDec import Encoder, EncoderLayer
 from models.Attentions.dozer_attention import DozerAttentionLayer, DozerAttention
 
@@ -50,6 +51,22 @@ class tsformer_Encoder(nn.Module):
                     ],
                     norm_layer=None
                 ))
+
+                # Encoder(
+                #     [EncoderLayer(
+                #         AttentionLayer(
+                #             FullAttention(False, attention_dropout=configs.dropout,
+                #                           output_attention=configs.output_attention),
+                #             d_model_lvl,
+                #             configs.n_heads),
+                #         d_model=d_model_lvl,
+                #         d_ff=dff_lvl,
+                #         dropout=configs.dropout,
+                #         activation=configs.activation
+                #     ) for l in range(configs.encoder_depth)
+                #     ],
+                #     norm_layer=None
+                # ))
 
             self.encoder_val_embeddings.append(DI_embedding(H_patch_size, configs.embed_dim, configs.dropout))
 
