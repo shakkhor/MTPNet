@@ -74,9 +74,7 @@ def main():
     parser.add_argument('--rand_rate', type=int, default=0.1, help='The rate of random attention')
     parser.add_argument('--vary_len', type=int, default=1, help='The start varying length, if 1 input equals output')
 
-    # Cross-variate attention (iTransformer-style) parameters
-    parser.add_argument('--variate_attn', action='store_true', default=False,
-                        help='add attention across variates before the output projection')
+    # Cross-variate attention (iTransformer-style) parameters, always on for MTPNet models
     parser.add_argument('--variate_d_model', type=int, default=128, help='token dimension of variate attention')
     parser.add_argument('--variate_d_ff', type=int, default=256, help='dimension of MLP in variate attention')
     parser.add_argument('--variate_layers', type=int, default=1, help='number of variate attention layers')
@@ -132,12 +130,13 @@ def main():
     else:
         args.data_split = string_split(args.data_split)
 
-    # # run exp Dozerformer
-    # args.model = "Dozerformer"
-    # args.patch_size = 12
-    # args.stride = 24
-    # args.local_window = 7
+    # # run exp Dozerformer (paper settings for ETTh1, from upstream scripts/ETTh1.sh)
+    # args.model = "Dozerformer_Linear"
+    # args.patch_size = 24
+    # args.stride = 7
+    # args.local_window = 3
     # args.seq_len = 720
+    # args.learning_rate = 5e-5
 
     #Run exp variate mixer
     args.model = "MTPNet"
@@ -180,7 +179,7 @@ def main():
 def get_settings(args: Namespace) -> str:
     run_id = datetime.now().strftime('%Y%m%d-%H%M%S')
 
-    return '{}_{}_{}_{}_ft{}_sl{}_ll{}_pl{}_segl{}_dm{}_Hlvl{}_nh{}_el{}_dl{}_df{}_va{}'.format(
+    return '{}_{}_{}_{}_ft{}_sl{}_ll{}_pl{}_segl{}_dm{}_Hlvl{}_nh{}_el{}_dl{}_df{}'.format(
         run_id,
         args.mode,
         args.model,
@@ -195,8 +194,7 @@ def get_settings(args: Namespace) -> str:
         args.n_heads,
         args.encoder_depth,
         args.decoder_depth,
-        1,
-        args.variate_layers if args.variate_attn else 0)
+        1)
 
 
 if __name__ == "__main__":

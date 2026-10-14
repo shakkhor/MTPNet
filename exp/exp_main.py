@@ -210,9 +210,7 @@ class Exp_Main(Exp_Basic):
             '| n_heads | {} |'.format(args.n_heads),
             '| encoder_depth | {} |'.format(args.encoder_depth),
             '| decoder_depth | {} |'.format(args.decoder_depth),
-            '| variate_attn | {} |'.format(
-                'L={} d={} ff={}'.format(args.variate_layers, args.variate_d_model, args.variate_d_ff)
-                if args.variate_attn else 'off'),
+            '| variate_attn | L={} d={} ff={} |'.format(args.variate_layers, args.variate_d_model, args.variate_d_ff),
             '| seed | {} |'.format(args.seed),
             '',
             '| Metric | Value |',

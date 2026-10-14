@@ -70,7 +70,8 @@ class Dataset_MTS(Dataset):
         if self.scale:
             if self.scale_statistic is None:
                 self.scaler = StandardScaler()
-                train_data = df_data[border1 : border2]
+                # Fit on the training split only, for every flag, so val/test use train statistics
+                train_data = df_data[train_start:train_end]
                 self.scaler.fit(train_data.values)
             else:
                 self.scaler = StandardScaler(mean=self.scale_statistic['mean'], std=self.scale_statistic['std'])
