@@ -66,6 +66,9 @@ class Dataset_MTS(Dataset):
 
         cols_data = df_raw.columns[1:]
         df_data = df_raw[cols_data]
+        # kept for the run visualizer: variable names and the timestamp of every row in this split
+        self.columns = list(cols_data)
+        self.dates = pd.to_datetime(df_raw[df_raw.columns[0]][border1:border2]).reset_index(drop=True)
 
         if self.scale:
             if self.scale_statistic is None:

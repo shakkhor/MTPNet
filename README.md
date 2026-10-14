@@ -22,6 +22,15 @@ Multivariate Time Series (MTS) forecasting involves modeling temporal dependenci
    bash ./scripts/ILI.sh
    ```
 
+## Run visualizer
+Every test run writes `run_info.json` and `report.json` into its `results/<run>/` folder. To browse them, run from the repo root:
+```
+python visualizer/serve.py
+```
+It opens a page in your browser listing every run with its parameters and metrics. Tick up to six runs on the same dataset to see their predictions together against the actual values, by day, week, month or year, split into trend, seasonal and local parts, with an hour-by-hour table you can filter by how far off a prediction was. Options: `--results <folder>`, `--port <n>`, `--host <address>`, `--no-browser`.
+
+On a remote machine (SSH or a remote IDE session) it does not try to open a browser. It prints the port instead: let your editor forward it (VS Code's Ports panel, PyCharm/Gateway's forwarded ports), or run the `ssh -N -L ...` command it prints on your own computer, then open `http://127.0.0.1:8765/` locally.
+
 ## Citation
 If you find this repository beneficial for your research, kindly include a citation:
 ```
