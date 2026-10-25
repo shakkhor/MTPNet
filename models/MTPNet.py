@@ -68,9 +68,11 @@ class Model(nn.Module):
         # example 32 8 8 12 7 -> 32 7 8*8*12 scale 1
         # example 32 8 4 24 7 -> 32 7 8*4*24 scale 2
         # combine two scales as the input for transformer 32 14 8*8*12
-        final_predict = rearrange(encoder_output[0], 'b d seg_num seg_len ts_d -> b ts_d (d seg_num seg_len)')
+        # concat drops the padding of patch sizes that don't divide seq_len, so every scale has length seq_len
+        segments = self.encoder_seasonal.encoder_segments
+        final_predict = rearrange(segments[0].concat(encoder_output[0]), 'b d seq_len ts_d -> b ts_d (d seq_len)')
         for i in range(1, self.encoder_seasonal.H_depth):
-            final_predict = torch.cat((final_predict, rearrange(encoder_output[i], 'b d seg_num seg_len ts_d -> b ts_d (d seg_num seg_len)')), dim=1)
+            final_predict = torch.cat((final_predict, rearrange(segments[i].concat(encoder_output[i]), 'b d seq_len ts_d -> b ts_d (d seq_len)')), dim=1)
         # apply variate mixer here for multi scale
         final_predict = self.variate_mixer(final_predict)
         # back to scales stacked on the channel axis: 32 14 8*96 -> 32 2*8 96 7

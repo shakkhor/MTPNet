@@ -1,4 +1,6 @@
 import argparse
+import csv
+import fcntl
 from argparse import Namespace
 
 import torch
@@ -7,7 +9,6 @@ import random
 import numpy as np
 from utils.tools import string_split
 import json
-from datetime import datetime
 
 
 def main():
@@ -22,7 +23,7 @@ def main():
 
     parser.add_argument('--batch_size', type=int, default=32, help='batch size of train input data')
 
-    parser.add_argument('--root_path', type=str, default='./data/datasets/',
+    parser.add_argument('--root_path', type=str, default='./data/dataset/',
                         help='root path of the data file')
     parser.add_argument('--data_path', type=str, default='ETTh1.csv', help='location of the data file')
     parser.add_argument('--seq_len', type=int, default=96, help='input sequence length for encoder, look back window')
@@ -116,11 +117,11 @@ def main():
         'ETTh2': {'data': 'ETT-data/ETTh2.csv', 'data_dim': 7, 'split': [12 * 30 * 24, 4 * 30 * 24, 4 * 30 * 24]},
         'ETTm1': {'data': 'ETT-data/ETTm1.csv', 'data_dim': 7, 'split': [4 * 12 * 30 * 24, 4 * 4 * 30 * 24, 4 * 4 * 30 * 24]},
         'ETTm2': {'data': 'ETT-data/ETTm2.csv', 'data_dim': 7, 'split': [4 * 12 * 30 * 24, 4 * 4 * 30 * 24, 4 * 4 * 30 * 24]},
-        'electricity': {'data': 'STEE/electricity.csv', 'data_dim': 321, 'split': [0.7, 0.1, 0.2]},
-        'Weather': {'data': 'STEE/weather.csv', 'data_dim': 21, 'split': [0.7, 0.1, 0.2]},
-        'ILI': {'data': 'national_illness.csv', 'data_dim': 7, 'split': [0.7, 0.1, 0.2]},
-        'Traffic': {'data': 'traffic.csv', 'data_dim': 862, 'split': [0.7, 0.1, 0.2]},
-        'Exchange': {'data': 'STEE/exchange_rate.csv', 'data_dim': 8, 'split': [0.7, 0.1, 0.2]},
+        'electricity': {'data': 'electricity/electricity.csv', 'data_dim': 321, 'split': [0.7, 0.1, 0.2]},
+        'Weather': {'data': 'weather/weather.csv', 'data_dim': 21, 'split': [0.7, 0.1, 0.2]},
+        'ILI': {'data': 'illness/national_illness.csv', 'data_dim': 7, 'split': [0.7, 0.1, 0.2]},
+        'Traffic': {'data': 'traffic/traffic.csv', 'data_dim': 862, 'split': [0.7, 0.1, 0.2]},
+        'Exchange': {'data': 'exchange_rate/exchange_rate.csv', 'data_dim': 8, 'split': [0.7, 0.1, 0.2]},
     }
     if args.data in data_parser.keys():
         data_info = data_parser[args.data]
@@ -138,13 +139,10 @@ def main():
     # args.seq_len = 720
     # args.learning_rate = 5e-5
 
-    #Run exp variate mixer
-    args.model = "MTPNet"
-    args.local_window = 3
-    args.stride = 7
-    args.patch_size = [12, 24]
-    args.seq_len = 720
-
+    # Model, local_window, stride, patch_size and seq_len come from the command line.
+    # Dozerformer takes a single patch size, MTPNet takes a list
+    if args.model.startswith('Dozerformer'):
+        args.patch_size = args.patch_size[0]
 
 
     print('Args in experiment:')
@@ -164,6 +162,7 @@ def main():
 
             print('>>>>>>>testing : {}<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<'.format(setting))
             exp.test(setting)
+            append_results_csv(args, setting)
 
             torch.cuda.empty_cache()
     else:
@@ -176,11 +175,39 @@ def main():
         torch.cuda.empty_cache()
 
 
-def get_settings(args: Namespace) -> str:
-    run_id = datetime.now().strftime('%Y%m%d-%H%M%S')
+def append_results_csv(args: Namespace, setting: str, csv_path: str = 'results.csv') -> None:
+    # exp.test() saves [mae, mse, rmse, mape, mspe, corr] to metrics.npy
+    mae, mse = np.load('./results/' + setting + '/metrics.npy')[:2]
+    row = {
+        'dataset': args.data,
+        'model': args.model,
+        'seq_len': args.seq_len,
+        'label_len': args.label_len,
+        'pred_len': args.pred_len,
+        'patch_size': ' '.join(str(p) for p in args.patch_size) if isinstance(args.patch_size, list) else args.patch_size,
+        'local_window': args.local_window,
+        'stride': args.stride,
+        'vary_len': args.vary_len,
+        'embed_dim': args.embed_dim,
+        'learning_rate': args.learning_rate,
+        'batch_size': args.batch_size,
+        'seed': args.seed,
+        'MSE': mse,
+        'MAE': mae,
+    }
+    # Lock so parallel runs finishing together don't interleave rows or write the header twice
+    with open(csv_path, 'a', newline='') as f:
+        fcntl.flock(f, fcntl.LOCK_EX)
+        writer = csv.DictWriter(f, fieldnames=list(row))
+        if f.tell() == 0:
+            writer.writeheader()
+        writer.writerow(row)
+        f.flush()
+        fcntl.flock(f, fcntl.LOCK_UN)
 
-    return '{}_{}_{}_{}_ft{}_sl{}_ll{}_pl{}_segl{}_dm{}_Hlvl{}_nh{}_el{}_dl{}_df{}'.format(
-        run_id,
+
+def get_settings(args: Namespace) -> str:
+    return '{}_{}_{}_ft{}_sl{}_ll{}_pl{}_segl{}_dm{}_Hlvl{}_nh{}_el{}_dl{}_df{}_lw{}_st{}_seed{}'.format(
         args.mode,
         args.model,
         args.data,
@@ -194,7 +221,10 @@ def get_settings(args: Namespace) -> str:
         args.n_heads,
         args.encoder_depth,
         args.decoder_depth,
-        1)
+        1,
+        args.local_window,
+        args.stride,
+        args.seed)
 
 
 if __name__ == "__main__":
