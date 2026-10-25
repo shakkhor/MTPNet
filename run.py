@@ -1,8 +1,6 @@
 import argparse
-import netrc
 import os
 from argparse import Namespace
-from urllib.parse import urlparse
 
 import torch
 from exp.exp_main import Exp_Main
@@ -169,28 +167,12 @@ def start_wandb(args: Namespace, setting: str):
     if wandb is None:
         print('wandb not installed, run is not logged to wandb')
         return None
-    mode = os.environ.get('WANDB_MODE', 'online')
-    if mode == 'online' and not wandb_logged_in():
-        # wandb.init would stop and ask for a login, which hangs a script of runs
-        print('no wandb login found (run `wandb login` once), run is not logged to wandb')
-        return None
     try:
         return wandb.init(project=os.environ.get('WANDB_PROJECT', 'SVPNet'), entity=os.environ.get('WANDB_ENTITY'),
                           name=setting, config=vars(args))
     except Exception as e:
         print('wandb not started ({}), run is not logged to wandb'.format(e))
         return None
-
-
-def wandb_logged_in() -> bool:
-    # `wandb login` saves the key in ~/.netrc; WANDB_API_KEY works without it
-    if os.environ.get('WANDB_API_KEY'):
-        return True
-    host = urlparse(os.environ.get('WANDB_BASE_URL', 'https://api.wandb.ai')).hostname
-    try:
-        return netrc.netrc().authenticators(host) is not None
-    except (FileNotFoundError, netrc.NetrcParseError):
-        return False
 
 
 def get_settings(args: Namespace) -> str:
