@@ -3,7 +3,6 @@ from exp.exp_basic import Exp_Basic
 from utils.tools import EarlyStopping, visual, process_one_batch
 from utils.metrics import metric
 from models import MTPNet, MTPNet_Linear, Dozerformer, Dozerformer_Linear
-from visualizer.report import write_run_report
 
 import numpy as np
 import torch
@@ -20,8 +19,6 @@ class Exp_Main(Exp_Basic):
     def __init__(self, args):
         super(Exp_Main, self).__init__(args)
         self.args.device = self.device
-        if args.load_pretrained_model:
-            self._load_pretrain_model()
 
     def _build_model(self):
         model_dict = {
@@ -189,8 +186,6 @@ class Exp_Main(Exp_Basic):
         np.save(folder_path + 'pred.npy', preds)
         np.save(folder_path + 'true.npy', trues)
 
-        # files for the run visualizer (python visualizer/serve.py)
-        write_run_report(preds, trues, test_data, folder_path, setting, self.args, mse, mae)
 
         return
 

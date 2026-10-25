@@ -34,34 +34,6 @@ def load_model(model, model_dir, model_name='pems08', horizon=12):
         print('loaded the model...', file_name, 'now lr:', lr, 'now epoch:', epoch)
     return model, lr, epoch
 
-# No warm up.
-def adjust_learning_rate(optimizer, epoch, args):
-    if args.lradj==1:
-        lr_adjust = {epoch: args.learning_rate * (0.95 ** (epoch // 1))}
-    elif args.lradj==2:
-        lr_adjust = {
-            0: 0.0001, 5: 0.0005, 10:0.001, 20: 0.0001, 30: 0.00005, 40: 0.00001
-            , 70: 0.000001
-        }
-    elif args.lradj==3:
-        lr_adjust = {2: args.learning_rate * 0.5 ** 1, 4: args.learning_rate * 0.5 ** 2,
-                     6: args.learning_rate * 0.5 ** 3, 8: args.learning_rate * 0.5 ** 4,
-                     10: args.learning_rate * 0.5 ** 5}
-    elif args.lradj==4:
-        lr_adjust = {epoch: args.learning_rate * (0.5 ** ((epoch - 1) // 1))}
-    # Fixed learning rate
-    else:
-        lr_adjust = {}
-
-    if epoch in lr_adjust.keys():
-        lr = lr_adjust[epoch]
-        for param_group in optimizer.param_groups:
-            param_group['lr'] = lr
-        print('Updating learning rate to {}'.format(lr))
-    else:
-        for param_group in optimizer.param_groups:
-            lr = param_group['lr']
-    return lr
 
 class EarlyStopping:
     def __init__(self, patience=7, verbose=False, delta=0):

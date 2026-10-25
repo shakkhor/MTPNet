@@ -36,7 +36,7 @@ class tsformer_Encoder(nn.Module):
                 Encoder(
                     [EncoderLayer(
                         DozerAttentionLayer(
-                            DozerAttention(configs.local_window, configs.stride, configs.rand_rate,
+                            DozerAttention(configs.local_window, configs.stride,
                                                            configs.vary_len, self.encoder_segments[i].seg_num,
                                                            False,
                                                            attention_dropout=configs.dropout,

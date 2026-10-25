@@ -1,6 +1,4 @@
 import argparse
-import csv
-import fcntl
 from argparse import Namespace
 
 import torch
@@ -13,19 +11,17 @@ import json
 
 def main():
     parser = argparse.ArgumentParser(description='TSMAE')
-    parser.add_argument('--mode', default='finetune', type=str, help='Name of model to train, options: [pretrain, finetune, Transformer]')
     parser.add_argument('--data', type=str, required=False, default='ETTh1',
                         help='name of dataset')
     parser.add_argument('--is_training', type=int, default=1, help='status')
     parser.add_argument('--model', type=str, default='MTPNet_Linear', help='model name, options: [MTPNet, MTPNet_Linear]')
-    parser.add_argument('--model_id', type=str, default='test', help='model id')
     parser.add_argument('--checkpoints', type=str, default='./checkpoints/', help='location of model checkpoints')
 
     parser.add_argument('--batch_size', type=int, default=32, help='batch size of train input data')
 
     parser.add_argument('--root_path', type=str, default='./data/dataset/',
                         help='root path of the data file')
-    parser.add_argument('--data_path', type=str, default='ETTh1.csv', help='location of the data file')
+    parser.add_argument('--data_path', type=str, default='ETTh1.csv', help='location of the data file, ignored for the named datasets below')
     parser.add_argument('--seq_len', type=int, default=96, help='input sequence length for encoder, look back window')
     parser.add_argument('--label_len', type=int, default=96, help='start token length of Informer decoder')
     parser.add_argument('--pred_len', type=int, default=96, help='prediction sequence length, horizon')
@@ -33,21 +29,18 @@ def main():
                         help='features S is univariate, M is multivariate')
     parser.add_argument('--num_workers', type=int, default=0, help='data loader num workers')
     parser.add_argument('--data_split', type=str, default='0.6,0.2,0.2',
-                        help='train/val/test split, can be ratio or number')
+                        help='train/val/test split, can be ratio or number, ignored for the named datasets below')
 
-    parser.add_argument('--use_gpu', type=bool, default=True, help='use gpu')
-    parser.add_argument('--data_dim', type=int, default=7, help='Number of dimensions of the MTS data (D)')
-    parser.add_argument('--embed_dim', type=int, default=8, help='encoder input size')
-    parser.add_argument('--decoder_embed_dim', type=int, default=8, help='encoder input size')
+    parser.add_argument('--use_gpu', type=int, default=1, help='1 uses the gpu when one is available, 0 forces cpu')
+    parser.add_argument('--data_dim', type=int, default=7, help='Number of dimensions of the MTS data (D), ignored for the named datasets below')
+    parser.add_argument('--embed_dim', type=int, default=8, help='encoder input size, also used for the decoder')
 
 
     parser.add_argument('--n_heads', type=int, default=4, help='number of multihead attention')
     parser.add_argument('--encoder_depth', type=int, default=2, help='number of encoder layers')
     parser.add_argument('--decoder_depth', type=int, default=1, help='number of decoder layers')
     parser.add_argument('--d_ff', type=int, default=32, help='dimension of MLP in transformer')
-    parser.add_argument('--output_attention', action='store_true', help='whether to output attention in encoder')
-    parser.add_argument('--H_depth', type=int, default=1, help='The depth of hierarchical transformer')
-    parser.add_argument('--patch_size', type=str, default='12, 24', help='patch sizes of hierarchical architecture')
+    parser.add_argument('--patch_size', type=str, default='12, 24', help='patch sizes of hierarchical architecture, one level per size')
     parser.add_argument('--trend_patch_size', type=str, default='24', help='patch sizes of Trend hierarchical architecture')
     parser.add_argument('--moving_avg', type=str, default='13, 17', help='window size of moving average')
 
@@ -60,19 +53,13 @@ def main():
     parser.add_argument('--itr', type=int, default=1, help='experiments times')
     parser.add_argument('--patience', type=int, default=5, help='early stopping patience')
     parser.add_argument('--learning_rate', type=float, default=1e-4, help='optimizer learning rate')
-    parser.add_argument('--lradj', type=int, default=3, help='adjust learning rate')
     parser.add_argument('--train_epochs', type=int, default=20, help='train epochs')
-    parser.add_argument('--use_amp', action='store_true', help='use automatic mixed precision training', default=False)
-    parser.add_argument('--load_pretrained_model', type=bool, default=False, help='flag for wether load encoder from pretrained model')
-    parser.add_argument('--ala_type', type=str, default='False', help='ablation study type')
 
     # DozerAttention parameters
     parser.add_argument('--local_window', type=int, default=7, help='The size of local window')
     # this should be determined with considering the total lengths of the patches
     parser.add_argument('--stride', type=int, default=24,
                         help='The stride interval sparse attention. If set to 24, interval will be 24.')
-    #this should be determined with considering the total lengths of the patches
-    parser.add_argument('--rand_rate', type=int, default=0.1, help='The rate of random attention')
     parser.add_argument('--vary_len', type=int, default=1, help='The start varying length, if 1 input equals output')
 
     # Cross-variate attention (iTransformer-style) parameters, always on for MTPNet models
@@ -82,23 +69,18 @@ def main():
 
 
     args = parser.parse_args()
+
+    # Fixed settings, not command-line flags
     args.mode = 'finetune'
+    args.output_attention = False
+    args.use_amp = False
 
     args.patch_size = [int(i) for i in args.patch_size.split(', ')]
     args.trend_patch_size = [int(i) for i in args.trend_patch_size.split(', ')]
     args.H_depth = len(args.patch_size)
     args.moving_avg = [int(i) for i in args.moving_avg.split(', ')]
-    args.lradj = 'CosineAnnealing'
-    args.desktop_idx = 5
-
-    # Model's parameters
     args.decoder_embed_dim = args.embed_dim
-    args.d_ff = args.embed_dim*args.n_heads if args.d_ff == None else args.d_ff
-    args.output_attention = False
-
-    # Optimization's parameters
-    args.use_amp = False
-    args.use_gpu = True if torch.cuda.is_available() and args.use_gpu else False
+    args.use_gpu = bool(args.use_gpu) and torch.cuda.is_available()
 
     seed = args.seed
     torch.manual_seed(seed)
@@ -162,7 +144,6 @@ def main():
 
             print('>>>>>>>testing : {}<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<'.format(setting))
             exp.test(setting)
-            append_results_csv(args, setting)
 
             torch.cuda.empty_cache()
     else:
@@ -173,37 +154,6 @@ def main():
         print('>>>>>>>testing : {}<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<'.format(setting))
         exp.test(setting, test=1)
         torch.cuda.empty_cache()
-
-
-def append_results_csv(args: Namespace, setting: str, csv_path: str = 'results.csv') -> None:
-    # exp.test() saves [mae, mse, rmse, mape, mspe, corr] to metrics.npy
-    mae, mse = np.load('./results/' + setting + '/metrics.npy')[:2]
-    row = {
-        'dataset': args.data,
-        'model': args.model,
-        'seq_len': args.seq_len,
-        'label_len': args.label_len,
-        'pred_len': args.pred_len,
-        'patch_size': ' '.join(str(p) for p in args.patch_size) if isinstance(args.patch_size, list) else args.patch_size,
-        'local_window': args.local_window,
-        'stride': args.stride,
-        'vary_len': args.vary_len,
-        'embed_dim': args.embed_dim,
-        'learning_rate': args.learning_rate,
-        'batch_size': args.batch_size,
-        'seed': args.seed,
-        'MSE': mse,
-        'MAE': mae,
-    }
-    # Lock so parallel runs finishing together don't interleave rows or write the header twice
-    with open(csv_path, 'a', newline='') as f:
-        fcntl.flock(f, fcntl.LOCK_EX)
-        writer = csv.DictWriter(f, fieldnames=list(row))
-        if f.tell() == 0:
-            writer.writeheader()
-        writer.writerow(row)
-        f.flush()
-        fcntl.flock(f, fcntl.LOCK_UN)
 
 
 def get_settings(args: Namespace) -> str:

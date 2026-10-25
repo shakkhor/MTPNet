@@ -33,7 +33,7 @@ class dozerformer_Encoder(nn.Module):
         self.encoder = Encoder(
             [EncoderLayer(
                 DozerAttentionLayer(
-                    DozerAttention(configs.local_window, configs.stride, configs.rand_rate,
+                    DozerAttention(configs.local_window, configs.stride,
                                     configs.vary_len, self.encoder_segment.seg_num,
                                     False,
                                     attention_dropout=configs.dropout,
@@ -103,7 +103,7 @@ class dozerformer_Decoder(nn.Module):
                     # 注意mask flag。True and False.
                     # Decoder中第一个attention
                     DozerAttentionLayer(
-                        DozerAttention(configs.local_window, configs.stride, configs.rand_rate, configs.vary_len,
+                        DozerAttention(configs.local_window, configs.stride, configs.vary_len,
                                        pred_segs,
                                        False,
                                        attention_dropout=configs.dropout,
@@ -112,7 +112,7 @@ class dozerformer_Decoder(nn.Module):
                         configs.n_heads),
                     # Decoder中第二个attention。Q是decoder的输入，KV是Encoder的输入。CrossAttention
                     DozerAttentionLayer(
-                        DozerAttention(configs.local_window, configs.stride, configs.rand_rate, configs.vary_len,
+                        DozerAttention(configs.local_window, configs.stride, configs.vary_len,
                                        pred_segs,
                                        False,
                                        attention_dropout=configs.dropout,

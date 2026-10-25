@@ -7,12 +7,11 @@ from einops import einsum, rearrange
 
 
 class DozerAttention(nn.Module):
-    def __init__(self, local_window, stride, rand_rate, vary_len, pred_len, mask_flag=True, scale=None, attention_dropout=0.1, output_attention=False):
+    def __init__(self, local_window, stride, vary_len, pred_len, mask_flag=True, scale=None, attention_dropout=0.1, output_attention=False):
         super(DozerAttention, self).__init__()
         self.scale = scale
         self.local_window = local_window
         self.stride = stride
-        self.rand_rate = rand_rate
         self.vary_len = vary_len
         self.mask_flag = mask_flag
         self.pred_len = pred_len
