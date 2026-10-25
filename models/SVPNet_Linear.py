@@ -2,10 +2,8 @@ import torch
 from torch import nn
 from einops import rearrange
 
-# Implementation from other source code.
-from models.MTPNet_EncDec import tsformer_Encoder
+from models.SVPNet_EncDec import SVPNet_Encoder
 from models.Attentions.REVIN import RevIN
-
 from models.build_model_util import series_decomp_multi, VariateMixer
 
 
@@ -20,7 +18,6 @@ class Model(nn.Module):
         self.pred_len = configs.pred_len
         self.in_channel = configs.data_dim
         self.embed_dim = configs.embed_dim
-        # self.mask_ratio = configs.mask_ratio
         self.encoder_depth = configs.encoder_depth
         self.dropout = configs.dropout
         self.epoch = 0
@@ -32,33 +29,29 @@ class Model(nn.Module):
         # Decomposition
         self.decomp_multi = series_decomp_multi(configs.moving_avg)
 
-        # Seasonal encoder
-        self.encoder_seasonal = tsformer_Encoder(configs, mode='Seasonal')
+        # Seasonal encoder and decoder
+        self.encoder_seasonal = SVPNet_Encoder(configs, mode='Seasonal')
         self.output_layer = nn.Conv2d(in_channels=self.embed_dim * self.encoder_seasonal.H_depth,
                                       out_channels=1,
                                       kernel_size=(1, 1))
 
         # Trend Encoder
-        self.encoder_trend = tsformer_Encoder(configs, mode='Trend')
-        self.output_layer_trend = nn.Conv2d(in_channels=self.embed_dim * self.encoder_trend.H_depth,
-                                            out_channels=1,
-                                            kernel_size=(1, 1))
+        self.trend_model = nn.Linear(configs.seq_len, configs.pred_len)
 
-        # Cross-variate attention (iTransformer-style)
+        # Cross-variate attention on the seasonal branch (iTransformer-style)
         # Tokens are one variate at one scale, length embed_dim*seq_len
         self.variate_mixer = VariateMixer(self.embed_dim * configs.seq_len, configs.variate_d_model, configs.n_heads,
                                           configs.variate_d_ff, configs.variate_layers,
                                           configs.dropout)
 
-        # Projection: seq_len -> pred_len
-        self.final_proj = nn.Linear(configs.seq_len, configs.pred_len)
+        # Seasonal projection: seq_len -> pred_len
+        self.seasonal_proj = nn.Linear(configs.seq_len, configs.pred_len)
 
     def forward(self, x_enc, x_dec,
                 enc_self_mask=None, dec_self_mask=None, dec_enc_mask=None
                 ) -> torch.tensor:
         x_enc = self.revin_layer(x_enc, 'norm')
         x_enc, trend_enc = self.decomp_multi(x_enc)
-
 
         # Seasonal
         encoder_output = self.encoder_seasonal(x_enc)
@@ -81,19 +74,15 @@ class Model(nn.Module):
         final_predict = self.output_layer(final_predict)
 
         # Trend
-        encoder_trend_output = self.encoder_trend(trend_enc)
-
-        # Trend output
-        trend_predict = self.encoder_trend.encoder_segments[0].concat(encoder_trend_output[0])
-        for i in range(1, self.encoder_trend.H_depth):
-            trend_predict = torch.cat((trend_predict, self.encoder_trend.encoder_segments[i].concat(encoder_trend_output[i])), dim=1)
-        trend_predict = self.output_layer_trend(trend_predict)
+        trend_enc = rearrange(trend_enc, 'b seq_len ts_d -> b ts_d seq_len')
+        trend_predict = self.trend_model(trend_enc)
+        trend_predict = rearrange(trend_predict, 'b ts_d seq_len -> b seq_len ts_d')
 
         # Concate Trend and Seasonal
-        final_predict += trend_predict
         final_predict = rearrange(final_predict, 'b 1 seq_len ts_d -> b ts_d seq_len')
-        final_predict = self.final_proj(final_predict)
+        final_predict = self.seasonal_proj(final_predict)
         final_predict = rearrange(final_predict, 'b ts_d pred_len -> b pred_len ts_d')
+        final_predict += trend_predict
 
         final_predict = self.revin_layer(final_predict, 'denorm')
 

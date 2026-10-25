@@ -2,12 +2,16 @@ from data.data_provider import data_provider
 from exp.exp_basic import Exp_Basic
 from utils.tools import EarlyStopping, visual, process_one_batch
 from utils.metrics import metric
-from models import MTPNet, MTPNet_Linear, Dozerformer, Dozerformer_Linear
+from models import SVPNet, SVPNet_Linear, Dozerformer, Dozerformer_Linear
 
 import numpy as np
 import torch
 import torch.nn as nn
 from torch import optim
+try:
+    import wandb
+except ImportError:
+    wandb = None
 import os
 import time
 import warnings
@@ -22,8 +26,11 @@ class Exp_Main(Exp_Basic):
 
     def _build_model(self):
         model_dict = {
-            'MTPNet': MTPNet,
-            'MTPNet_Linear': MTPNet_Linear,
+            # SVPNet: Sparse Variate Pyramid Network. The MTPNet names are its old names, kept for scripts/trial_scripts
+            'SVPNet': SVPNet,
+            'SVPNet_Linear': SVPNet_Linear,
+            'MTPNet': SVPNet,
+            'MTPNet_Linear': SVPNet_Linear,
             'Dozerformer': Dozerformer,
             'Dozerformer_Linear': Dozerformer_Linear,
         }
@@ -102,6 +109,8 @@ class Exp_Main(Exp_Basic):
 
             print("Epoch: {:3d}, Steps: {:3d}, cost time: {:5.2f} | Train Loss: {:5.4f} Vali Loss: {:5.4f} Test Loss: {:5.4f}".format(
                 epoch + 1, train_steps, (time.time() - epoch_time), train_loss, vali_loss, test_loss))
+            if wandb is not None and wandb.run is not None:
+                wandb.log({'epoch': epoch + 1, 'train_loss': train_loss, 'vali_loss': vali_loss, 'test_loss': test_loss})
             early_stopping(vali_loss, self.model, path)
             if early_stopping.early_stop:
                 print("Early stopping")
@@ -173,6 +182,8 @@ class Exp_Main(Exp_Basic):
         mae, mse, rmse, mape, mspe, corr = metric(preds, trues)
 
         print('mse:{}, mae:{}'.format(mse, mae))
+        if wandb is not None and wandb.run is not None:
+            wandb.run.summary.update({'MSE': mse, 'MAE': mae, 'RMSE': rmse, 'MAPE': mape, 'MSPE': mspe, 'CORR': corr})
         f = open("result.txt", 'a')
         f.write(setting + "  \n")
         f.write('mse:{}, mae:{}'.format(mse, mae))

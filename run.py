@@ -1,5 +1,8 @@
 import argparse
+import netrc
+import os
 from argparse import Namespace
+from urllib.parse import urlparse
 
 import torch
 from exp.exp_main import Exp_Main
@@ -7,6 +10,7 @@ import random
 import numpy as np
 from utils.tools import string_split
 import json
+from exp.exp_main import wandb
 
 
 def main():
@@ -14,7 +18,7 @@ def main():
     parser.add_argument('--data', type=str, required=False, default='ETTh1',
                         help='name of dataset')
     parser.add_argument('--is_training', type=int, default=1, help='status')
-    parser.add_argument('--model', type=str, default='MTPNet_Linear', help='model name, options: [MTPNet, MTPNet_Linear]')
+    parser.add_argument('--model', type=str, default='SVPNet_Linear', help='model name, options: [SVPNet, SVPNet_Linear, Dozerformer, Dozerformer_Linear]')
     parser.add_argument('--checkpoints', type=str, default='./checkpoints/', help='location of model checkpoints')
 
     parser.add_argument('--batch_size', type=int, default=32, help='batch size of train input data')
@@ -62,7 +66,7 @@ def main():
                         help='The stride interval sparse attention. If set to 24, interval will be 24.')
     parser.add_argument('--vary_len', type=int, default=1, help='The start varying length, if 1 input equals output')
 
-    # Cross-variate attention (iTransformer-style) parameters, always on for MTPNet models
+    # Cross-variate attention (iTransformer-style) parameters, always on for SVPNet and SVPNet_Linear
     parser.add_argument('--variate_d_model', type=int, default=128, help='token dimension of variate attention')
     parser.add_argument('--variate_d_ff', type=int, default=256, help='dimension of MLP in variate attention')
     parser.add_argument('--variate_layers', type=int, default=1, help='number of variate attention layers')
@@ -122,7 +126,7 @@ def main():
     # args.learning_rate = 5e-5
 
     # Model, local_window, stride, patch_size and seq_len come from the command line.
-    # Dozerformer takes a single patch size, MTPNet takes a list
+    # Dozerformer takes a single patch size, SVPNet takes a list
     if args.model.startswith('Dozerformer'):
         args.patch_size = args.patch_size[0]
 
@@ -137,6 +141,7 @@ def main():
         for ii in range(args.itr):
             # setting record of experiments
             setting = get_settings(args)
+            run = start_wandb(args, setting)
 
             exp = Exp(args)  # set experiments
             print('>>>>>>>start training : {}>>>>>>>>>>>>>>>>>>>>>>>>>>'.format(setting))
@@ -144,6 +149,8 @@ def main():
 
             print('>>>>>>>testing : {}<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<'.format(setting))
             exp.test(setting)
+            if run is not None:
+                run.finish()
 
             torch.cuda.empty_cache()
     else:
@@ -154,6 +161,36 @@ def main():
         print('>>>>>>>testing : {}<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<'.format(setting))
         exp.test(setting, test=1)
         torch.cuda.empty_cache()
+
+
+def start_wandb(args: Namespace, setting: str):
+    # All runs go to one wandb project; without wandb or a login the run trains as before, just unlogged.
+    # Account and project come from WANDB_ENTITY / WANDB_PROJECT, on/off from WANDB_MODE (online, offline, disabled)
+    if wandb is None:
+        print('wandb not installed, run is not logged to wandb')
+        return None
+    mode = os.environ.get('WANDB_MODE', 'online')
+    if mode == 'online' and not wandb_logged_in():
+        # wandb.init would stop and ask for a login, which hangs a script of runs
+        print('no wandb login found (run `wandb login` once), run is not logged to wandb')
+        return None
+    try:
+        return wandb.init(project=os.environ.get('WANDB_PROJECT', 'SVPNet'), entity=os.environ.get('WANDB_ENTITY'),
+                          name=setting, config=vars(args))
+    except Exception as e:
+        print('wandb not started ({}), run is not logged to wandb'.format(e))
+        return None
+
+
+def wandb_logged_in() -> bool:
+    # `wandb login` saves the key in ~/.netrc; WANDB_API_KEY works without it
+    if os.environ.get('WANDB_API_KEY'):
+        return True
+    host = urlparse(os.environ.get('WANDB_BASE_URL', 'https://api.wandb.ai')).hostname
+    try:
+        return netrc.netrc().authenticators(host) is not None
+    except (FileNotFoundError, netrc.NetrcParseError):
+        return False
 
 
 def get_settings(args: Namespace) -> str:

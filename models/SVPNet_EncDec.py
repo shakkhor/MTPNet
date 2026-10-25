@@ -10,7 +10,7 @@ from models.Attentions.dozer_attention import DozerAttentionLayer, DozerAttentio
 from models.build_model_util import DI_embedding, TS_Segment
 
 
-class tsformer_Encoder(nn.Module):
+class SVPNet_Encoder(nn.Module):
     def __init__(self, configs, mode):
         super().__init__()
         self.patch_size = configs.patch_size if mode == 'Seasonal' else configs.trend_patch_size
