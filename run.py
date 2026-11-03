@@ -68,6 +68,8 @@ def main():
     parser.add_argument('--variate_d_model', type=int, default=128, help='token dimension of variate attention')
     parser.add_argument('--variate_d_ff', type=int, default=256, help='dimension of MLP in variate attention')
     parser.add_argument('--variate_layers', type=int, default=1, help='number of variate attention layers')
+    parser.add_argument('--variate_pos_embed', type=int, default=1,
+                        help='1 adds a learnable positional encoding to the variate attention tokens, 0 turns it off')
 
 
     args = parser.parse_args()

@@ -49,6 +49,12 @@ class Model(nn.Module):
         self.variate_mixer = VariateMixer(self.embed_dim * configs.seq_len, configs.variate_d_model, configs.n_heads,
                                           configs.variate_d_ff, configs.variate_layers,
                                           configs.dropout)
+        # Learnable positional encoding, one vector per token (variate x scale): (1, s*ts_d, d*seq_len)
+        self.use_variate_pos_embed = bool(configs.variate_pos_embed)
+        if self.use_variate_pos_embed:
+            self.variate_pos_embed = nn.Parameter(
+                torch.zeros(1, self.encoder_seasonal.H_depth * self.in_channel, self.embed_dim * configs.seq_len))
+            nn.init.trunc_normal_(self.variate_pos_embed, std=0.02)
 
         # Projection: seq_len -> pred_len
         self.final_proj = nn.Linear(configs.seq_len, configs.pred_len)
@@ -73,6 +79,9 @@ class Model(nn.Module):
         final_predict = rearrange(segments[0].concat(encoder_output[0]), 'b d seq_len ts_d -> b ts_d (d seq_len)')
         for i in range(1, self.encoder_seasonal.H_depth):
             final_predict = torch.cat((final_predict, rearrange(segments[i].concat(encoder_output[i]), 'b d seq_len ts_d -> b ts_d (d seq_len)')), dim=1)
+        # add learnable positional encoding so each token knows its variate and scale
+        if self.use_variate_pos_embed:
+            final_predict = final_predict + self.variate_pos_embed
         # apply variate mixer here for multi scale
         final_predict = self.variate_mixer(final_predict)
         # back to scales stacked on the channel axis: 32 14 8*96 -> 32 2*8 96 7
