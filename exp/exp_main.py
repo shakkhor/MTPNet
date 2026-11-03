@@ -117,7 +117,7 @@ class Exp_Main(Exp_Basic):
                 break
 
         best_model_path = path + '/' + 'checkpoint.pth'
-        self.model.load_state_dict(torch.load(best_model_path))
+        self.model.load_state_dict(torch.load(best_model_path, map_location='cpu'))
 
         return self.model
 

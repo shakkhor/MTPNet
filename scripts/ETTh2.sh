@@ -2,7 +2,7 @@
 seeds=(2023)
 data=ETTh2
 model=SVPNet
-seq_len=720
+seq_len=96
 label_len=96
 embed_dim=8
 moving_avg='13, 17'

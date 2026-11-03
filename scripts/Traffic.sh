@@ -3,13 +3,13 @@ seeds=(2023)
 data=Traffic
 model=SVPNet
 gpu=1
-seq_len=720
+seq_len=96
 label_len=96
 embed_dim=8
 moving_avg='13, 17'
 vary_len=1
 lr=5e-4
-batch_size=8
+batch_size=4
 patch_size='8, 24, 48'
 # Dozer attention parameters
 local_window=3
