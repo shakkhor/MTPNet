@@ -7,7 +7,7 @@ label_len=96
 embed_dim=8
 moving_avg='13, 17'
 vary_len=1
-lr=9e-2
+lr=1e-4
 batch_size=32
 patch_size='58, 96'
 # Dozer attention parameters

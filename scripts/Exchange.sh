@@ -1,0 +1,41 @@
+# Random Seeds
+seeds=(2023)
+data=Exchange
+model=SVPNet
+gpu=1
+seq_len=96
+label_len=96
+embed_dim=8
+moving_avg='13, 17'
+vary_len=1
+lr=1e-4
+batch_size=32
+patch_size='8, 12, 24'
+# Dozer attention parameters
+local_window=3
+stride=2
+# shellcheck disable=SC2068
+
+for seed in ${seeds[@]}
+do
+      echo $seed
+      #----------------------------------predict length 96---------------------------------------
+      python run.py --seed $seed --data $data --model $model --gpu $gpu --batch_size $batch_size --moving_avg "$moving_avg" \
+      --seq_len $seq_len --label_len $label_len --pred_len 96 --embed_dim $embed_dim \
+      --learning_rate $lr --patch_size "$patch_size" --local_window $local_window --stride $stride --vary_len $vary_len
+
+      #----------------------------------predict length 192---------------------------------------
+      python run.py --seed $seed --data $data --model $model --gpu $gpu --batch_size $batch_size --moving_avg "$moving_avg" \
+      --seq_len $seq_len --label_len $label_len --pred_len 192 --embed_dim $embed_dim \
+      --learning_rate $lr --patch_size "$patch_size" --local_window $local_window --stride $stride --vary_len $vary_len
+
+      #----------------------------------predict length 336---------------------------------------
+      python run.py --seed $seed --data $data --model $model --gpu $gpu --batch_size $batch_size --moving_avg "$moving_avg" \
+      --seq_len $seq_len --label_len $label_len --pred_len 336 --embed_dim $embed_dim \
+      --learning_rate $lr --patch_size "$patch_size" --local_window $local_window --stride $stride --vary_len $vary_len
+
+      #----------------------------------predict length 720---------------------------------------
+      python run.py --seed $seed --data $data --model $model --gpu $gpu --batch_size $batch_size --moving_avg "$moving_avg" \
+      --seq_len $seq_len --label_len $label_len --pred_len 720 --embed_dim $embed_dim \
+      --learning_rate $lr --patch_size "$patch_size" --local_window $local_window --stride $stride --vary_len $vary_len
+done
